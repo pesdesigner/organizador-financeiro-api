@@ -1,0 +1,28 @@
+openapi: 3.1.0
+info:
+  title: Organizador Financeiro API
+  version: 0.0.0
+  description: API do Organizador Financeiro Pessoal.
+
+paths:
+  /api/health:
+    get:
+      summary: Verifica a disponibilidade da API
+      operationId: getHealth
+      responses:
+        '200':
+          description: API disponível
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - service
+                properties:
+                  status:
+                    type: string
+                    const: ok
+                  service:
+                    type: string
+                    const: organizador-financeiro-api
