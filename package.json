@@ -1,6 +1,6 @@
 {
   "name": "organizador-financeiro-api",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -16,5 +16,8 @@
     "@types/node": "^26.6.6",
     "typescript": "^7.0.2",
     "vercel": "^66.6.0"
+  },
+  "dependencies": {
+    "mongodb": "^7.9.1"
   }
 }

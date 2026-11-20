@@ -1,28 +1,45 @@
-openapi: 3.1.0
+openapi: 3.0.3
+
 info:
   title: Organizador Financeiro API
-  version: 0.0.0
-  description: API do Organizador Financeiro Pessoal.
+  description: API do Organizador Financeiro Pessoal
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Desenvolvimento local
 
 paths:
   /api/health:
     get:
-      summary: Verifica a disponibilidade da API
-      operationId: getHealth
+      summary: Verifica a disponibilidade da API e do MongoDB
       responses:
-        '200':
-          description: API disponível
+        "200":
+          description: API disponível e conectada ao MongoDB
           content:
             application/json:
               schema:
                 type: object
-                required:
-                  - status
-                  - service
                 properties:
                   status:
                     type: string
-                    const: ok
+                    example: ok
                   service:
                     type: string
-                    const: organizador-financeiro-api
+                    example: organizador-financeiro-api
+                  database:
+                    type: string
+                    example: connected
+        "503":
+          description: API sem conexão com o MongoDB
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                    example: Database unavailable
