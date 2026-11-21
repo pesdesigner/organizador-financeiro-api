@@ -61,8 +61,15 @@ export async function POST(request: Request): Promise<Response> {
       200,
       { 'Set-Cookie': createSessionCookie(session.token, session.expiresAt) },
     )
-  } catch {
-    console.error('Falha ao processar login.')
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message.replace(/mongodb(?:\+srv)?:\/\/\S+/gi, '[URI ocultada]')
+        : 'Erro desconhecido'
+
+    const errorName = error instanceof Error ? error.name : 'UnknownError'
+
+    console.error(`Falha ao processar login [${errorName}]: ${message}`)
     return json({ error: 'Erro interno ao processar login.' }, 500)
   }
 }
