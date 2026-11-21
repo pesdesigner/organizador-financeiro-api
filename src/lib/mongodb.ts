@@ -29,3 +29,16 @@ export async function getDatabase(): Promise<Db> {
   const client = await globalForMongo.mongoClientPromise
   return client.db(databaseName)
 }
+
+export async function closeDatabase(): Promise<void> {
+  const clientPromise = globalForMongo.mongoClientPromise
+
+  if (!clientPromise) {
+    return
+  }
+
+  globalForMongo.mongoClientPromise = undefined
+
+  const client = await clientPromise
+  await client.close()
+}

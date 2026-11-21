@@ -3,7 +3,7 @@ openapi: 3.0.3
 info:
   title: Organizador Financeiro API
   description: API do Organizador Financeiro Pessoal
-  version: 1.0.0
+  version: 0.2.0
 
 servers:
   - url: http://localhost:3000
@@ -12,10 +12,10 @@ servers:
 paths:
   /api/health:
     get:
-      summary: Verifica a disponibilidade da API e do MongoDB
+      summary: Verifica a API e a conexão com o MongoDB
       responses:
         "200":
-          description: API disponível e conectada ao MongoDB
+          description: API disponível e conectada ao banco
           content:
             application/json:
               schema:
@@ -31,15 +31,401 @@ paths:
                     type: string
                     example: connected
         "503":
-          description: API sem conexão com o MongoDB
+          description: Banco de dados indisponível
+          content:
+            application/json:
+                 schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      example: error
+                    service:
+                      type: string
+                      example: organizador-financeiro-api
+                    database:
+                      type: string
+                      example: unavailable
+
+  /api/auth/login:
+    post:
+      summary: Inicia uma sessão
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        "200":
+          description: Login realizado
+          headers:
+            Set-Cookie:
+              description: Cookie de sessão HttpOnly
+              schema:
+                type: string
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  user:
+                    $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: E-mail ou senha inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Erro interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/auth/me:
+    get:
+      summary: Consulta o usuário da sessão atual
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Sessão válida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Sessão ausente ou inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Erro interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/auth/logout:
+    post:
+      summary: Encerra a sessão atual
+      security:
+        - sessionCookie: []
+      responses:
+        "204":
+          description: Sessão encerrada
+          headers:
+            Set-Cookie:
+              description: Remove o cookie de sessão
+              schema:
+                type: string
+        "500":
+          description: Erro interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/admin/invites:
+    post:
+      summary: Cria um convite de cadastro
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "201":
+          description: Convite criado; o token é retornado para ser compartilhado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invite:
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                        format: email
+                      token:
+                        type: string
+                      expiresAt:
+                        type: string
+                        format: date-time
+        "400":
+          description: E-mail inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Sessão ausente ou inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Usuário sem permissão de admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Usuário ou convite válido já existe para esse e-mail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Erro interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/auth/register:
+    post:
+      summary: Cria uma conta usando um convite válido
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - name
+                - password
+              properties:
+                token:
+                  type: string
+                name:
+                  type: string
+                  maxLength: 100
+                password:
+                  type: string
+                  format: password
+                  minLength: 12
+      responses:
+        "201":
+          description: Conta criada e sessão iniciada
+          headers:
+            Set-Cookie:
+              description: Cookie de sessão HttpOnly
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/AuthUser"
+        "400":
+          description: Dados inválidos ou convite inválido/expirado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Convite já utilizado ou conta já existente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Erro interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    /api/admin/users:
+    get:
+      summary: Lista até 100 usuários
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Lista de usuários sem hashes de senha
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Sessão ausente ou inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Usuário sem permissão de admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Erro interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    patch:
+      summary: Ativa ou desativa uma conta de usuário
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - status
+              properties:
+                userId:
+                  type: string
+                  description: ID MongoDB de 24 caracteres hexadecimais
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - disabled
+      responses:
+        "200":
+          description: Estado do usuário atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
                   status:
                     type: string
-                    example: error
-                  message:
-                    type: string
-                    example: Database unavailable
+                    enum:
+                      - active
+                      - disabled
+        "400":
+          description: ID ou estado inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Sessão ausente ou inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Usuário sem permissão ou tentativa de alterar um admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Usuário não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Erro interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-organizador-financeiro-session
+
+  schemas:
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum:
+            - admin
+            - user
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum:
+            - admin
+            - user
+        status:
+          type: string
+          enum:
+            - active
+            - disabled
+        createdAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
